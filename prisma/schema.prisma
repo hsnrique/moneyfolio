@@ -1,0 +1,264 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+  binaryTargets   = ["debian-openssl-1.1.x", "linux-arm64-openssl-3.0.x", "native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Access {
+  alias         String?
+  createdAt     DateTime @default(now())
+  granteeUserId String?
+  id            String   @id @default(uuid())
+  updatedAt     DateTime @updatedAt
+  userId        String
+  GranteeUser   User?    @relation("accessGet", fields: [granteeUserId], references: [id])
+  User          User     @relation("accessGive", fields: [userId], references: [id])
+}
+
+model Account {
+  balance     Float            @default(0)
+  balances    AccountBalance[]
+  comment     String?
+  createdAt   DateTime         @default(now())
+  currency    String?
+  id          String           @default(uuid())
+  isDefault   Boolean          @default(false)
+  isExcluded  Boolean          @default(false)
+  name        String?
+  platformId  String?
+  updatedAt   DateTime         @updatedAt
+  userId      String
+  Platform    Platform?        @relation(fields: [platformId], references: [id])
+  User        User             @relation(fields: [userId], references: [id])
+  Order       Order[]
+
+  @@id([id, userId])
+}
+
+model AccountBalance {
+  accountId String
+  createdAt DateTime @default(now())
+  date      DateTime @default(now())
+  id        String   @id @default(uuid())
+  updatedAt DateTime @updatedAt
+  userId    String
+  value     Float
+  Account   Account  @relation(fields: [accountId, userId], onDelete: Cascade, references: [id, userId])
+}
+
+model Analytics {
+  activityCount Int      @default(0)
+  country       String?
+  updatedAt     DateTime @updatedAt
+  userId        String   @id
+  User          User     @relation(fields: [userId], references: [id])
+}
+
+model AuthDevice {
+  createdAt           DateTime @default(now())
+  credentialId        Bytes
+  credentialPublicKey Bytes
+  counter             Int
+  id                  String   @id @default(uuid())
+  updatedAt           DateTime @updatedAt
+  userId              String
+  User                User     @relation(fields: [userId], references: [id])
+}
+
+model MarketData {
+  createdAt   DateTime        @default(now())
+  dataSource  DataSource
+  date        DateTime
+  id          String          @id @default(uuid())
+  marketPrice Float
+  state       MarketDataState @default(CLOSE)
+  symbol      String
+
+  @@unique([dataSource, date, symbol])
+  @@index([symbol])
+}
+
+model Order {
+  accountId       String?
+  accountUserId   String?
+  comment         String?
+  createdAt       DateTime      @default(now())
+  date            DateTime
+  fee             Float
+  id              String        @id @default(uuid())
+  isDraft         Boolean       @default(false)
+  quantity        Float
+  symbolProfileId String
+  type            Type
+  unitPrice       Float
+  updatedAt       DateTime      @updatedAt
+  userId          String
+  Account         Account?      @relation(fields: [accountId, accountUserId], references: [id, userId])
+  SymbolProfile   SymbolProfile @relation(fields: [symbolProfileId], references: [id])
+  User            User          @relation(fields: [userId], references: [id])
+  tags            Tag[]
+}
+
+model Platform {
+  id      String    @id @default(uuid())
+  name    String?
+  url     String    @unique
+  Account Account[]
+}
+
+model Property {
+  key   String @id
+  value String
+}
+
+model Settings {
+  settings  Json?
+  updatedAt DateTime @updatedAt
+  userId    String   @id
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model SymbolProfile {
+  assetClass             AssetClass?
+  assetSubClass          AssetSubClass?
+  comment                String?
+  countries              Json?
+  createdAt              DateTime                @default(now())
+  currency               String
+  dataSource             DataSource
+  figi                   String?
+  figiComposite          String?
+  figiShareClass         String?
+  id                     String                  @id @default(uuid())
+  isin                   String?
+  name                   String?
+  updatedAt              DateTime                @updatedAt
+  scraperConfiguration   Json?
+  sectors                Json?
+  symbol                 String
+  symbolMapping          Json?
+  url                    String?
+  Order                  Order[]
+  SymbolProfileOverrides SymbolProfileOverrides?
+
+  @@unique([dataSource, symbol])
+}
+
+model SymbolProfileOverrides {
+  assetClass      AssetClass?
+  assetSubClass   AssetSubClass?
+  countries       Json?          @default("[]")
+  name            String?
+  sectors         Json?          @default("[]")
+  url             String?
+  symbolProfileId String         @id
+  updatedAt       DateTime       @updatedAt
+  SymbolProfile   SymbolProfile  @relation(fields: [symbolProfileId], references: [id])
+}
+
+model Subscription {
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  id        String   @id @default(uuid())
+  price     Float?
+  updatedAt DateTime @updatedAt
+  userId    String
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model Tag {
+  id     String  @id @default(uuid())
+  name   String  @unique
+  orders Order[]
+}
+
+model User {
+  accessToken   String?
+  authChallenge String?
+  createdAt     DateTime       @default(now())
+  id            String         @id @default(uuid())
+  provider      Provider       @default(ANONYMOUS)
+  role          Role           @default(USER)
+  thirdPartyId  String?
+  updatedAt     DateTime       @updatedAt
+  Access        Access[]       @relation("accessGet")
+  AccessGive    Access[]       @relation("accessGive")
+  Account       Account[]
+  Analytics     Analytics?
+  AuthDevice    AuthDevice[]
+  Order         Order[]
+  Settings      Settings?
+  Subscription  Subscription[]
+}
+
+enum AccountType {
+  CASH
+  SECURITIES
+}
+
+enum AssetClass {
+  CASH
+  COMMODITY
+  EQUITY
+  FIXED_INCOME
+  REAL_ESTATE
+}
+
+enum AssetSubClass {
+  BOND
+  COMMODITY
+  CRYPTOCURRENCY
+  ETF
+  MUTUALFUND
+  PRECIOUS_METAL
+  PRIVATE_EQUITY
+  STOCK
+}
+
+enum DataSource {
+  ALPHA_VANTAGE
+  COINGECKO
+  EOD_HISTORICAL_DATA
+  FINANCIAL_MODELING_PREP
+  GOOGLE_SHEETS
+  MANUAL
+  RAPID_API
+  YAHOO
+}
+
+enum MarketDataState {
+  CLOSE
+  INTRADAY
+}
+
+enum Provider {
+  ANONYMOUS
+  GOOGLE
+  INTERNET_IDENTITY
+}
+
+enum Role {
+  ADMIN
+  DEMO
+  USER
+}
+
+enum Type {
+  BUY
+  DIVIDEND
+  FEE
+  INTEREST
+  ITEM
+  LIABILITY
+  SELL
+}
+
+enum ViewMode {
+  DEFAULT
+  ZEN
+}

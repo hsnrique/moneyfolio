@@ -1,0 +1,32 @@
+@import 'apps/client/src/styles/ghostfolio-style';
+
+:host {
+  display: block;
+
+  ::ng-deep {
+    .mat-mdc-progress-spinner {
+      circle {
+        stroke: rgba(var(--dark-dividers));
+      }
+    }
+  }
+
+  .mat-mdc-chip {
+    cursor: pointer;
+    min-height: 1.5rem !important;
+  }
+}
+
+:host-context(.is-dark-theme) {
+  .mat-mdc-form-field {
+    color: rgba(var(--light-primary-text));
+  }
+
+  ::ng-deep {
+    .mat-mdc-progress-spinner {
+      circle {
+        stroke: rgba(var(--light-dividers));
+      }
+    }
+  }
+}
